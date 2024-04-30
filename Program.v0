@@ -1,0 +1,71 @@
+﻿using System.Diagnostics;
+using System.Text;
+
+namespace _1brc.csharp;
+
+struct Measurement
+{
+    public string Name;
+    public double Min;
+    public double Max;
+    public double Sum;
+    public int Count;
+
+    public Measurement(string name, double min, double max, double sum, int count)
+    {
+        Name = name;
+        Min = min;
+        Max = max;
+        Sum = sum;
+        Count = count;
+    }
+}
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        var inputFile = Path.Combine("..", "1brc.data", "measurements-1000000000.txt");
+        var outputFile = "output.txt";
+        var version = "0";
+        var resultsFile = $"results_{version}.txt";
+        var startTime = Stopwatch.StartNew();
+
+        var map = new Dictionary<string, Measurement>();
+
+        using (var reader = new StreamReader(inputFile))
+        {
+            while (reader.ReadLine() is string line)
+            {
+                var parts = line.Split(';');
+                var name = parts[0];
+                var value = double.Parse(parts[1]);
+                var measurement = map.GetValueOrDefault(name, new Measurement(name, double.MaxValue, double.MinValue, 0, 0));
+
+                measurement.Min = Math.Min(measurement.Min, value);
+                measurement.Max = Math.Max(measurement.Max, value);
+                measurement.Sum += value;
+                measurement.Count++;
+            }
+        }
+
+        // output
+        using (var writer = new StreamWriter(outputFile))
+        {
+            foreach (var kvp in map.OrderBy(kvp => kvp.Key, StringComparer.InvariantCulture))
+            {
+                var measurement = kvp.Value;
+                var average = measurement.Sum / measurement.Count;
+                writer.WriteLine($"{measurement.Name} : {measurement.Min} / {average} / {measurement.Max}");
+            }
+        }
+
+        // results
+        var elapsedTime = startTime.ElapsedMilliseconds;
+        using (var writer = new StreamWriter(resultsFile))
+        {
+            // get seconds
+            writer.WriteLine($"Version {version} Elapsed time: {elapsedTime / 1000.0} s");
+        }
+    }
+}
